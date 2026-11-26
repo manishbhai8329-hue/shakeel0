@@ -284,10 +284,45 @@ button:focus-visible{
   outline-offset:3px;
 }
 
+/* 10 SECOND COUNTDOWN */
+
+.timer{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:5px;
+  margin:10px 0 0;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.5;
+}
+
+.timer[hidden]{
+  display:none;
+}
+
+.timer strong{
+  color:var(--gold);
+  font-size:15px;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+}
+
+.cancel-timer{
+  padding:4px 5px;
+  border:0;
+  background:none;
+  color:var(--emerald);
+  font:inherit;
+  text-decoration:underline;
+  cursor:pointer;
+}
+
 /* CTA SUPPORTING TEXT */
 
 .micro{
-  margin:10px 0 0;
+  margin:7px 0 0;
   color:var(--emerald);
   font-size:10px;
   line-height:1.5;
@@ -436,7 +471,7 @@ body.modal-open{
   }
 }
 
-/* COMPACT VIEWPORT */
+/* COMPACT MOBILE VIEWPORT */
 
 @media(max-height:700px){
 
@@ -493,8 +528,13 @@ body.modal-open{
     padding:9px 6px;
   }
 
-  .micro{
+  .timer{
     margin-top:7px;
+    font-size:10px;
+  }
+
+  .micro{
+    margin-top:5px;
   }
 
   .disclaimer{
@@ -572,8 +612,12 @@ body.modal-open{
     min-height:44px;
   }
 
-  .micro{
+  .timer{
     margin-top:5px;
+  }
+
+  .micro{
+    margin-top:4px;
   }
 
   .disclaimer{
@@ -684,7 +728,7 @@ aria-label="Hafiz Zayan Sidduqui Educational Community">
 
   </div>
 
-  <!-- MANUAL TELEGRAM CTA -->
+  <!-- TELEGRAM CTA -->
 
   <a class="cta"
      id="joinBtn"
@@ -700,6 +744,25 @@ aria-label="Hafiz Zayan Sidduqui Educational Community">
     JOIN FREE TELEGRAM CHANNEL
 
   </a>
+
+  <!-- VISIBLE 10 SECOND COUNTDOWN -->
+
+  <p class="timer" id="timerText" hidden>
+
+    Opening Telegram in
+
+    <strong id="seconds">10</strong>s
+
+    <button
+      type="button"
+      class="cancel-timer"
+      id="cancelTimer">
+
+      Cancel
+
+    </button>
+
+  </p>
 
   <p class="micro">
     Free Educational Community • Learn Responsibly
@@ -908,12 +971,21 @@ aria-label="Hafiz Zayan Sidduqui Educational Community">
 
   <p>
     Joining the Telegram community is voluntary.
-    Clicking the Telegram button does not
-    automatically subscribe visitors to the channel.
+    Opening Telegram does not automatically
+    subscribe visitors to the channel.
     Telegram's own terms and policies apply.
   </p>
 
-  <h3>7. Information Accuracy</h3>
+  <h3>7. Automatic Navigation</h3>
+
+  <p>
+    This website automatically opens the Telegram
+    destination after a visible 10-second countdown.
+    Visitors can cancel automatic navigation using
+    the Cancel button or by opening legal information.
+  </p>
+
+  <h3>8. Information Accuracy</h3>
 
   <p>
     Educational information may become outdated.
@@ -921,7 +993,7 @@ aria-label="Hafiz Zayan Sidduqui Educational Community">
     before relying on it.
   </p>
 
-  <h3>8. Updates</h3>
+  <h3>9. Updates</h3>
 
   <p>
     These terms may be updated when necessary
@@ -989,35 +1061,47 @@ aria-label="Hafiz Zayan Sidduqui Educational Community">
 
 </dialog>
 
-<!-- META TRACKING AND LEGAL FUNCTIONALITY -->
+<!-- META TRACKING + AUTO REDIRECT -->
 
 <script>
 (function(){
 
   "use strict";
 
+  // AUTO REDIRECT SETTINGS
+
+  const AUTO_REDIRECT = true;
+  const TIMER_SECONDS = 10;
+
   const joinButton =
     document.getElementById("joinBtn");
 
-  // MANUAL CTA TRACKING ONLY
-  // No automatic redirect.
-  // No countdown.
-  // No artificial delay.
-  // No duplicate-click blocking.
+  const timerText =
+    document.getElementById("timerText");
 
-  joinButton.addEventListener("click",function(){
+  const seconds =
+    document.getElementById("seconds");
+
+  const cancelButton =
+    document.getElementById("cancelTimer");
+
+  const destination = joinButton.href;
+
+  let interval = null;
+  let stopped = false;
+
+  const deadline =
+    performance.now() + TIMER_SECONDS * 1000;
+
+  // STANDARD META EVENT
+
+  function trackStandard(eventName){
 
     try{
 
       if(typeof window.fbq === "function"){
 
-        // Standard Subscribe event
-
-        window.fbq("track","Subscribe");
-
-        // Custom CTA click event
-
-        window.fbq("trackCustom","CTA_Click");
+        window.fbq("track",eventName);
 
       }
 
@@ -1027,9 +1111,118 @@ aria-label="Hafiz Zayan Sidduqui Educational Community">
 
     }
 
-    // Native Telegram link opens immediately.
+  }
+
+  // CUSTOM META EVENT
+
+  function trackCustom(eventName){
+
+    try{
+
+      if(typeof window.fbq === "function"){
+
+        window.fbq("trackCustom",eventName);
+
+      }
+
+    }catch(error){
+
+      console.warn("Meta tracking error:",error);
+
+    }
+
+  }
+
+  // STOP AUTO REDIRECT
+
+  function stopTimer(){
+
+    stopped = true;
+
+    if(interval !== null){
+
+      clearInterval(interval);
+
+      interval = null;
+
+    }
+
+  }
+
+  // MANUAL CTA CLICK TRACKING
+
+  joinButton.addEventListener("click",function(){
+
+    stopTimer();
+
+    // Subscribe only on manual button click
+
+    trackStandard("Subscribe");
+
+    // Custom manual click event
+
+    trackCustom("CTA_Click");
+
+    if(AUTO_REDIRECT){
+
+      timerText.textContent =
+        "Opening Telegram Channel...";
+
+    }
+
+    // Immediate native link navigation.
+    // No artificial delay.
 
   });
+
+  // CANCEL BUTTON
+
+  cancelButton.addEventListener("click",function(){
+
+    stopTimer();
+
+    timerText.textContent =
+      "Auto redirect cancelled.";
+
+  });
+
+  // COUNTDOWN FUNCTION
+
+  function updateCountdown(){
+
+    if(stopped)return;
+
+    const remaining = Math.max(
+
+      0,
+
+      Math.ceil(
+        (deadline - performance.now()) / 1000
+      )
+
+    );
+
+    seconds.textContent = remaining;
+
+    if(remaining === 0){
+
+      stopTimer();
+
+      timerText.textContent =
+        "Opening Telegram Channel...";
+
+      // Separate automatic redirect event.
+      // Subscribe does NOT fire here.
+
+      trackCustom("AutoRedirect");
+
+      // Automatically open Telegram.
+
+      window.location.assign(destination);
+
+    }
+
+  }
 
   // OPEN LEGAL POPUPS
 
@@ -1041,6 +1234,17 @@ aria-label="Hafiz Zayan Sidduqui Educational Community">
         const dialog = document.getElementById(
           button.dataset.dialog
         );
+
+        // Cancel redirect while reading policies.
+
+        if(AUTO_REDIRECT && !stopped){
+
+          stopTimer();
+
+          timerText.textContent =
+            "Auto redirect cancelled.";
+
+        }
 
         if(dialog){
 
@@ -1092,6 +1296,42 @@ aria-label="Hafiz Zayan Sidduqui Educational Community">
       });
 
     });
+
+  // START 10 SECOND COUNTDOWN
+
+  if(AUTO_REDIRECT){
+
+    timerText.hidden = false;
+
+    seconds.textContent = TIMER_SECONDS;
+
+    interval = setInterval(updateCountdown,200);
+
+    updateCountdown();
+
+  }
+
+  // STOP TIMER WHEN LEAVING PAGE
+
+  window.addEventListener("pagehide",stopTimer);
+
+  // CANCEL REDIRECT IF PAGE BECOMES HIDDEN
+
+  document.addEventListener(
+    "visibilitychange",
+    function(){
+
+      if(document.hidden && !stopped){
+
+        stopTimer();
+
+        timerText.textContent =
+          "Auto redirect cancelled.";
+
+      }
+
+    }
+  );
 
 })();
 </script>
